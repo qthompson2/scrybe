@@ -38,6 +38,7 @@ class LoginScreen(Screen):
 	
 	async def on_button_pressed(self, event: Button.Pressed) -> None:
 		if event.button.id == "loginScreen-loginButton":
+			DATABASE = None
 			loadingIndicator = self.query_one("#loginScreen-loading")
 			loadingIndicator.styles.display = "block"
 
@@ -67,6 +68,10 @@ class LoginScreen(Screen):
 			loadingIndicator = self.query_one("#loginScreen-loading")
 			loadingIndicator.styles.display = "none"
 
+			if DATABASE:
+				self.app.pop_screen()
+				self.app.push_screen("editor")
+
 class Editor(Screen):
 	def compose(self) -> ComposeResult:
 		yield Header(icon="\U0001FAB6") # U0001FAB6 -> 🪶
@@ -81,6 +86,7 @@ class ScribeCLI(App):
 		"login" : LoginScreen,
 		"editor" : Editor
 	}
+	CSS_PATH = "./styles/scribe.tcss"
 
 	def on_mount(self):
 		self.push_screen("login")
