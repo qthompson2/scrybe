@@ -26,3 +26,28 @@ EditorScreen > Horizontal > TextArea {
 EditorScreen > Horizontal > MarkdownViewer {
 	width: 40%;
 }
+
+ModalScreen {
+	align: center middle;
+}
+
+ModalScreen > Vertical {
+	width: 80;
+    height: 12;
+    margin: 1;
+    padding: 1;
+	border: solid white;
+}
+
+ModalScreen > Vertical > Widget {
+	margin: 1;
+    width: 100%;
+}
+
+ModalScreen > Vertical > Horizontal {
+	align: center middle;
+}
+
+ModalScreen > Vertical > Horizontal > Widget {
+	margin: 1;
+}
