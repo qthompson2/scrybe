@@ -1,6 +1,6 @@
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, Binding
 from textual.screen import Screen
-from textual.widgets import LoadingIndicator, Button, Input, Header, Footer, MarkdownViewer, ListView, TextArea
+from textual.widgets import LoadingIndicator, Button, Input, Header, Footer, MarkdownViewer, ListView, TextArea, Markdown
 from textual.containers import Vertical, Horizontal
 
 from mysql.connector.errors import Error as DatabaseError
@@ -77,7 +77,7 @@ class LoginScreen(Screen):
 				await setup_database(db)
 				DATABASE = db
 				self.notify(f"The connection to the database at {host} was successful.", title="Connection Successful.", severity="information")
-			except TypeError:
+			except DatabaseError:
 				self.notify(
 					"An unknown error occured! Please check your login information and confirm that the provided host is currently running mysql.", 
 					title="Connection Failure.", 
@@ -96,19 +96,39 @@ class LoginScreen(Screen):
 		if event.button.id == "loginScreen-loginButton":
 			self.run_worker(self.update_database(), exclusive=True)
 
-class Editor(Screen):
+class EditorScreen(Screen):
+	BINDINGS = [
+		("ctrl+e", "toggle_textArea", "Show/Hide Editor"),
+	]
+
 	def compose(self) -> ComposeResult:
 		yield Header(icon="\U0001FAB6") # U0001FAB6 -> 🪶
-		with Horizontal():
-			yield ListView()
-			yield TextArea()
-			yield MarkdownViewer()
+		with Horizontal(id="editorScreen-container"):
+			yield ListView(id="editorScreen-pages")
+			yield TextArea(id="editorScreen-textArea", language="markdown", show_line_numbers=True)
+			yield MarkdownViewer(id="editorScreen-preview")
 		yield Footer()
+
+	def action_toggle_textArea(self) -> None:
+		textArea = self.query_one("#editorScreen-textArea")
+		mdv = self.query_one("#editorScreen-preview")
+		if textArea.styles.display == "block":
+			textArea.styles.display = "none"
+			mdv.styles.width = "80%"
+		else:
+			textArea.styles.display = "block"
+			mdv.styles.width = "40%"
+	
+	def on_text_area_changed(self, event: TextArea.Changed) -> None:
+		if event.text_area.id == "editorScreen-textArea":
+			mdv = self.query_one("#editorScreen-preview")
+			md = mdv.query_one(Markdown)
+			md.update(event.text_area.text)
 
 class ScrybeCLI(App):
 	SCREENS = {
 		"login" : LoginScreen,
-		"editor" : Editor
+		"editor" : EditorScreen
 	}
 	CSS_PATH = "./styles/scrybe.tcss"
 

@@ -14,3 +14,15 @@ LoginScreen > Vertical > Widget {
 	margin: 1;
     width: 100%;
 }
+
+EditorScreen > Horizontal > ListView {
+	width: 20%;
+}
+
+EditorScreen > Horizontal > TextArea {
+	width: 40%;
+}
+
+EditorScreen > Horizontal > MarkdownViewer {
+	width: 40%;
+}
