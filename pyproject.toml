@@ -1,5 +1,5 @@
 [project]
-name = "scribe"
+name = "scrybe"
 version = "0.0.1"
 authors = [
 	{ name = "Quinn Thompson", email = "q.thompson088@gmail.com" },
