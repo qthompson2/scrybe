@@ -1,0 +1,9 @@
+[project]
+name = "scribe"
+version = "0.0.1"
+authors = [
+	{ name = "Quinn Thompson", email = "q.thompson088@gmail.com" },
+]
+description = "A light-weight terminal markdown editor, that saves to a remote or local mysql database."
+readme = "README.md"
+requires-python = ">=3.14.3"
