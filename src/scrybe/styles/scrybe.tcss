@@ -33,13 +33,18 @@ ModalScreen {
 
 ModalScreen > Vertical {
 	width: 80;
-    height: 12;
+    height: 17;
     margin: 1;
     padding: 1;
 	border: solid white;
 }
 
 ModalScreen > Vertical > Widget {
+	margin: 1;
+    width: 100%;
+}
+
+ModalScreen > Vertical > Vertical > Widget {
 	margin: 1;
     width: 100%;
 }
