@@ -44,19 +44,46 @@ class CreateNewScreen(ModalScreen):
 			page_container.styles.display = "none"
 			workspace_container.styles.display = "block"
 
-class ConfirmDeleteWorkspace(ModalScreen):
+class ConfirmDelete(ModalScreen):
 	BINDINGS = [("escape", "app.pop_screen", "Close")]
 
 	def __init__(self, parent: Screen, **kwargs):
 		super().__init__(**kwargs)
 		self.parent_screen = parent
+		self.wksp_selected = type(parent.current_workspace) == str
+		self.page_selected = type(parent.current_page) == int
 
 	def compose(self) -> ComposeResult:
-		with Vertical(id="deleteWorkspace-container"):
-			yield Label(f"The workspace ({self.parent_screen.current_workspace}) and all of its contents will be deleted.")
-			with Horizontal():
-				yield Button(id="deleteWorkspace-confirm", label="Delete", variant="error")
-				yield Button(id="deleteWorkspace-cancel", label="Cancel", variant="primary")
+		with Vertical():
+			yield Tabs("Page", "Workspace", id="confirmDelete-tabs")
+			with Vertical(id="deletePage-container"):
+				yield Label(f"This page will be deleted.")
+				with Horizontal():
+					yield Button(id="deletePage-confirm", label="Delete", variant="error")
+					yield Button(id="deletePage-cancel", label="Cancel", variant="primary")
+			with Vertical(id="deleteWorkspace-container"):
+				yield Label(f"The workspace ({self.parent_screen.current_workspace}) and all of its contents will be deleted.")
+				with Horizontal():
+					yield Button(id="deleteWorkspace-confirm", label="Delete", variant="error")
+					yield Button(id="deleteWorkspace-cancel", label="Cancel", variant="primary")
+
+	def on_mount(self) -> None:
+		if self.page_selected:
+			workspace_container = self.query_one("#deleteWorkspace-container", Vertical)
+			workspace_container.styles.display = "none"
+		elif self.wksp_selected:
+			workspace_container = self.query_one("#deletePage-container", Vertical)
+			workspace_container.styles.display = "none"
+	
+	def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+		page_container = self.query_one("#deletePage-container", Vertical)
+		workspace_container = self.query_one("#deleteWorkspace-container", Vertical)
+		if event.tab.label == "Page":
+			page_container.styles.display = "block"
+			workspace_container.styles.display = "none"
+		elif event.tab.label == "Workspace":
+			page_container.styles.display = "none"
+			workspace_container.styles.display = "block"
 	
 	def on_button_pressed(self, event: Button.Pressed) -> None:
 		if event.button.id == "deleteWorkspace-confirm":
@@ -64,20 +91,29 @@ class ConfirmDeleteWorkspace(ModalScreen):
 			self.app.pop_screen()
 		elif event.button.id == "deleteWorkspace-cancel":
 			self.app.pop_screen()
+		elif event.button.id == "deletePage-confirm":
+			pass
+		elif event.button.id == "deletePage-cancel":
+			self.app.pop_screen()
+
+class PageWrapper:
+	def __init__(self, content, history):
+		self.content: str = content
+		self.history = history
 
 class EditorScreen(Screen):
 	BINDINGS = [
-		("ctrl+e", "toggle_editor_view", "Show/Hide Editor"),
+		("ctrl+e", "toggle_editor_view", "Toggle Editor"),
 		("ctrl+n", "new", "New..."),
-		("ctrl+d+p", "delete_page", "Delete Page"),
-		("ctrl+r", "reload", "Reload Page"),
-		("ctrl+w", "new_workspace", "New Workspace"),
-		("ctrl+d+w", "delete_workspace", "Delete Workspace"),
+		("ctrl+d", "delete", "Delete..."),
+		("ctrl+s", "save", "Save"),
 	]
 
-	current_workspace = None
-	current_page = None
-	editor_hidden = False
+	current_workspace: str = None
+	current_page: int = None
+	editor_hidden: bool = False
+
+	page_wrappers: dict[int, PageWrapper] = {}
 
 	def compose(self) -> ComposeResult:
 		yield Header(icon="🪶") # U0001FAB6 -> 🪶
@@ -102,7 +138,7 @@ class EditorScreen(Screen):
 		mdv.styles.display = "block"
 		self.editor_hidden = False
 
-	async def create_new_workspace(self, name) -> None:
+	async def create_new_workspace(self, name: str) -> None:
 		try:
 			await self.app.db.create_workspace(name)
 			workspaces = self.query_one("#editorScreen-workspaces", Tabs)
@@ -119,15 +155,18 @@ class EditorScreen(Screen):
 		except Exception as e:
 				self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
 
-	async def create_new_page(self, name) -> None:
-		if self.current_workspace:
+	async def create_new_page(self, name: str) -> None:
+		if type(self.current_workspace) == str:
 			try:
 				page_id = await self.app.db.create_page(name, self.current_workspace)
 				pages = self.query_one("#editorScreen-pages", ListView)
-				pages.append(ListItem(Label(name), name=f"page-{page_id}"))
+				pages.append(ListItem(Label(name), name=f"page-{page_id}", id=f"page-{page_id}"))
 			except Exception as e:
 				self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
-				raise e
+
+	async def remove_page(self) -> None:
+		if type(self.current_page) == int:
+			pass
 
 	def action_toggle_editor_view(self) -> None:
 		if not self.editor_hidden:
@@ -143,9 +182,20 @@ class EditorScreen(Screen):
 	def action_new(self) -> None:
 		self.app.push_screen(CreateNewScreen(self))
 	
-	def action_delete_workspace(self) -> None:
-		self.app.push_screen(ConfirmDeleteWorkspace(self))
+	def action_delete(self) -> None:
+		self.app.push_screen(ConfirmDelete(self))
 	
+	def action_save(self) -> None:
+		self.run_worker(self.save(), exclusive=True)
+
+	async def save(self) -> None:
+		text_area = self.query_one("#editorScreen-textArea", TextArea)
+		try:
+			await self.app.db.update_page_content(self.current_page, text_area.text)
+			self.notify(f"File saved to database successfully! ({self.current_page})", title="File Saved 💾")
+		except Exception as e:
+			self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
+
 	def on_text_area_changed(self, event: TextArea.Changed) -> None:
 		if event.text_area.id == "editorScreen-textArea":
 			mdv = self.query_one("#editorScreen-preview")
@@ -164,14 +214,51 @@ class EditorScreen(Screen):
 				workspaces.add_tab(Tab(workspace_name))
 			self.current_workspace = workspace_names[0]
 	
+	def set_current_page(self, page_id: int) -> None:
+		self.unset_current_page()
+		self.current_page = page_id
+		if wrapper := self.page_wrappers.get(self.current_page):
+			text_area = self.query_one("#editorScreen-textArea", TextArea)
+			text_area.text = wrapper.content
+			text_area.history = wrapper.history
+		else:
+			self.run_worker(self.update_page(), exclusive=True)
+
+		page_list = self.query_one("#editorScreen-pages", ListView)
+		page_list_item = page_list.query_one(f"#page-{page_id}", ListItem)
+		page_list_item.focus()
+		if self.editor_hidden:
+			self.show_editor()
+
+	def unset_current_page(self) -> None:
+		self.hide_editor()
+		text_area = self.query_one("#editorScreen-textArea", TextArea)
+		self.page_wrappers[self.current_page] = PageWrapper(text_area.text, text_area.history)
+		text_area.load_text("")
+		mdv = self.query_one("#editorScreen-preview", MarkdownViewer)
+		md = mdv.query_one(Markdown)
+		md.update("")
+		mdv.table_of_contents.refresh()
+		self.current_page = None
+
 	async def update_pages(self) -> None:
 		pages = await self.app.db.get_pages(self.current_workspace)
 		page_list = self.query_one("#editorScreen-pages", ListView)
 		await page_list.clear()
 		if len(pages) != 0:
-			self.current_page = pages[0]["page_id"]
 			for page in pages:
-				page_list.append(ListItem(Label(page["page_name"]), name=f"page-{page['page_id']}"))
+				page_list.append(ListItem(Label(page["page_name"]), name=f"page-{page['page_id']}", id=f"page-{page['page_id']}"))
+			self.set_current_page(pages[0]["page_id"])
+		else:
+			self.unset_current_page()
+
+	async def update_page(self) -> None:
+		page_content = await self.app.db.get_page_content(self.current_page)
+		text_area = self.query_one("#editorScreen-textArea", TextArea)
+		text_area.load_text(page_content)
+		mdv = self.query_one("#editorScreen-preview", MarkdownViewer)
+		md = mdv.query_one(Markdown)
+		md.update(page_content)
 
 	def on_mount(self) -> None:
 		self.hide_editor()
@@ -179,12 +266,7 @@ class EditorScreen(Screen):
 
 	def on_list_view_selected(self, event: ListView.Selected) -> None:
 		if event.list_view.id == "editorScreen-pages":
-			self.current_page = int(event.item.name.replace("page-", ""))
-			self.show_editor()
-			text_area = self.query_one("#editorScreen-textArea", TextArea)
-			mdv = self.query_one("#editorScreen-preview", MarkdownViewer)
-			md = mdv.query_one(Markdown)
-			md.update(text_area.text)
+			self.set_current_page(int(event.item.name.replace("page-", "")))
 	
 	def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
 		self.current_workspace = event.tab.label_text

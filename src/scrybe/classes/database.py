@@ -99,8 +99,20 @@ class Database:
 			
 			if len(results) != 1 and len(results[0]) != 1:
 				raise Exception(f"No page with id #{page_id} exists!")
-			
-			return results[0][0]
+			elif type(results[0][0]) == str:
+				return results[0][0]
+			else:
+				return ""
+					
+	async def update_page_content(self, page_id: int, new_content: str) -> None:
+		async with self._lock:
+			results = await self._execute("SELECT 1 FROM page WHERE page_id = %s", params=[page_id], database=Database.NAME)
+
+			if len(results) != 1 and len(results[0]) != 1:
+				raise Exception(f"No page with id #{page_id} exists!")
+
+			await self._execute("UPDATE page SET content = %s WHERE page_id = %s", params=[new_content, page_id], database=Database.NAME)
+			self._connector.commit()
 		
 	class Page(TypedDict):
 		page_id: int
