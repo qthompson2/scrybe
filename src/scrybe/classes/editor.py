@@ -53,9 +53,15 @@ class ConfirmDelete(ModalScreen):
 		self.wksp_selected = type(parent.current_workspace) == str
 		self.page_selected = type(parent.current_page) == int
 
+		self.tabs = []
+		if self.wksp_selected and self.page_selected:
+			self.tabs = ["Page", "Workspace"]
+		elif self.wksp_selected:
+			self.tabs = ["Workspace"]
+
 	def compose(self) -> ComposeResult:
 		with Vertical():
-			yield Tabs("Page", "Workspace", id="confirmDelete-tabs")
+			yield Tabs(*self.tabs, id="confirmDelete-tabs")
 			with Vertical(id="deletePage-container"):
 				yield Label(f"This page will be deleted.")
 				with Horizontal():
@@ -92,7 +98,8 @@ class ConfirmDelete(ModalScreen):
 		elif event.button.id == "deleteWorkspace-cancel":
 			self.app.pop_screen()
 		elif event.button.id == "deletePage-confirm":
-			pass
+			self.parent_screen.run_worker(self.parent_screen.remove_page())
+			self.app.pop_screen()
 		elif event.button.id == "deletePage-cancel":
 			self.app.pop_screen()
 
@@ -103,10 +110,10 @@ class PageWrapper:
 
 class EditorScreen(Screen):
 	BINDINGS = [
-		("ctrl+e", "toggle_editor_view", "Toggle Editor"),
 		("ctrl+n", "new", "New..."),
 		("ctrl+d", "delete", "Delete..."),
 		("ctrl+s", "save", "Save"),
+		("ctrl+e", "toggle_editor_view", "Toggle Editor"),
 	]
 
 	current_workspace: str = None
@@ -165,8 +172,12 @@ class EditorScreen(Screen):
 				self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
 
 	async def remove_page(self) -> None:
-		if type(self.current_page) == int:
-			pass
+		if type(self.current_page) == int and self.current_page > 0:
+			try:
+				await self.app.db.delete_page(self.current_page)
+				await self.update_pages()
+			except Exception as e:
+				self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
 
 	def action_toggle_editor_view(self) -> None:
 		if not self.editor_hidden:

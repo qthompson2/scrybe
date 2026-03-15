@@ -93,6 +93,16 @@ class Database:
 
 			return page_id
 		
+	async def delete_page(self, page_id:int) -> None:
+		async with self._lock:
+			results = await self._execute("SELECT page_name FROM page WHERE page_id = %s", params=[page_id], database=Database.NAME)
+
+			if len(results) != 1:
+				raise Exception(f"No page with id #{page_id} exists!")
+			
+			await self._execute("DELETE FROM page WHERE page_id = %s", params=[page_id], database=Database.NAME)
+			self._connector.commit()
+		
 	async def get_page_content(self, page_id: int) -> str:
 		async with self._lock:
 			results = await self._execute("SELECT content FROM page WHERE page_id = %s", params=[page_id], database=Database.NAME)
