@@ -171,3 +171,21 @@ class Database:
 			self._connector.commit()
 			await self._execute("DELETE FROM workspace WHERE workspace_id = %s", params=[results[0][0]], database=Database.NAME)
 			self._connector.commit()
+
+	async def rename_workspace(self, old_name: str, new_name: str) -> None:
+		async with self._lock:
+			results = await self._execute("SELECT workspace_id FROM workspace WHERE workspace_name = %s", params=[old_name], database=Database.NAME)
+			if len(results) == 0:
+				raise Exception(f"Workspace with name '{old_name}' does not exist!")
+
+			await self._execute("UPDATE workspace SET workspace_name = %s WHERE workspace_id = %s", params=[new_name, results[0][0]], database=Database.NAME)
+			self._connector.commit()
+
+	async def rename_page(self, page_id: int, new_name: str) -> None:
+		async with self._lock:
+			results = await self._execute("SELECT page_id FROM page WHERE page_id = %s", params=[page_id], database=Database.NAME)
+			if len(results) == 0:
+				raise Exception(f"Page with id #{page_id} does not exist!")
+
+			await self._execute("UPDATE page SET page_name = %s WHERE page_id = %s", params=[new_name, page_id], database=Database.NAME)
+			self._connector.commit()

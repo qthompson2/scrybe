@@ -15,10 +15,10 @@ class CreateNewScreen(ModalScreen):
 			yield Tabs("Page", "Workspace", id="createNew-tabs")
 			with Vertical(id="pageScreen-container"):
 				yield Input(id="pageScreen-input", placeholder="Page name")
-				yield Button(id="pageScreen-confirm", label="Confirm", variant="primary")
+				yield Button(id="pageScreen-confirm", label="Create", variant="primary")
 			with Vertical(id="workspaceScreen-container"):
 				yield Input(id="workspaceScreen-input", placeholder="Workspace name")
-				yield Button(id="workspaceScreen-confirm", label="Confirm", variant="primary")
+				yield Button(id="workspaceScreen-confirm", label="Create", variant="primary")
 
 	def on_button_pressed(self, event: Button.Pressed) -> None:
 		if event.button.id == "pageScreen-confirm":
@@ -103,6 +103,47 @@ class ConfirmDelete(ModalScreen):
 		elif event.button.id == "deletePage-cancel":
 			self.app.pop_screen()
 
+class Options(ModalScreen):
+	BINDINGS = [("escape", "app.pop_screen", "Close")]
+
+	def __init__(self, parent: Screen, **kwargs):
+		super().__init__(**kwargs)
+		self.parent_screen = parent
+
+	def compose(self) -> ComposeResult:
+		with Vertical():
+			yield Tabs("Page", "Workspace", id="createNew-tabs")
+			with Vertical(id="renamePage-container"):
+				yield Input(id="renamePage-input", placeholder="Page name")
+				yield Button(id="renamePage-confirm", label="Rename", variant="primary")
+			with Vertical(id="renameWorkspace-container"):
+				yield Input(id="renameWorkspace-input", placeholder="Workspace name")
+				yield Button(id="renameWorkspace-confirm", label="Rename", variant="primary")
+
+	def on_button_pressed(self, event: Button.Pressed) -> None:
+		if event.button.id == "renamePage-confirm":
+			inp = self.query_one("#renamePage-input", Input)
+			self.parent_screen.run_worker(self.parent_screen.rename_page(inp.value))
+			self.app.pop_screen()
+		elif event.button.id == "renameWorkspace-confirm":
+			inp = self.query_one("#renameWorkspace-input", Input)
+			self.parent_screen.run_worker(self.parent_screen.rename_workspace(inp.value))
+			self.app.pop_screen()
+
+	def on_mount(self) -> None:
+		workspace_container = self.query_one("#renameWorkspace-container", Vertical)
+		workspace_container.styles.display = "none"
+	
+	def on_tabs_tab_activated(self, event: Tabs.TabActivated) -> None:
+		page_container = self.query_one("#renamePage-container", Vertical)
+		workspace_container = self.query_one("#renameWorkspace-container", Vertical)
+		if event.tab.label == "Page":
+			page_container.styles.display = "block"
+			workspace_container.styles.display = "none"
+		elif event.tab.label == "Workspace":
+			page_container.styles.display = "none"
+			workspace_container.styles.display = "block"
+
 class PageWrapper:
 	def __init__(self, content, history):
 		self.content: str = content
@@ -112,6 +153,7 @@ class EditorScreen(Screen):
 	BINDINGS = [
 		("ctrl+n", "new", "New..."),
 		("ctrl+d", "delete", "Delete..."),
+		("ctrl+o", "options", "Options..."),
 		("ctrl+s", "save", "Save"),
 		("ctrl+e", "toggle_editor_view", "Toggle Editor"),
 		("ctrl+t", "toggle_table_of_contents", "Toggle Table of Contents")
@@ -212,6 +254,9 @@ class EditorScreen(Screen):
 	
 	def action_delete(self) -> None:
 		self.app.push_screen(ConfirmDelete(self))
+
+	def action_options(self) -> None:
+		self.app.push_screen(Options(self))
 	
 	def action_save(self) -> None:
 		self.run_worker(self.save(), exclusive=True)
@@ -220,7 +265,24 @@ class EditorScreen(Screen):
 		text_area = self.query_one("#editorScreen-textArea", TextArea)
 		try:
 			await self.app.db.update_page_content(self.current_page, text_area.text)
-			self.notify(f"File saved to database successfully! ({self.current_page})", title="File Saved 💾")
+			self.notify(f"File saved to database successfully!", title="File Saved 💾")
+		except Exception as e:
+			self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
+
+	async def rename_page(self, name: str) -> None:
+		try:
+			await self.app.db.rename_page(self.current_page, name)
+			list_view = self.query_one("#editorScreen-pages", ListView)
+			list_item = list_view.query_one(f"#page-{self.current_page}", ListItem)
+			lab = list_item.query_one(Label)
+			lab.update(name)
+		except Exception as e:
+			self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
+
+	async def rename_workspace(self, name: str) -> None:
+		try:
+			await self.app.db.rename_workspace(self.current_workspace, name)
+			await self.update_workspaces()
 		except Exception as e:
 			self.notify(str(e), title="Database Error ⚠️", severity="warning", timeout=10)
 
