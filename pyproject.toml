@@ -1,12 +1,13 @@
 [build-system]
-
+requires = ["setuptools >= 77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
-name = "scrybe"
-version = "0.0.1"
+name = "markdown-scrybe"
+version = "0.0.17"
 description = "A light-weight terminal markdown editor, that saves to a remote or local mysql database."
 readme = "README.md"
-license = { text = "MIT }
+license = { text = "MIT" }
 authors = [
 	{ name = "Quinn Thompson", email = "q.thompson088@gmail.com" },
 ]
@@ -16,3 +17,15 @@ dependencies = [
 	"mysql-connector-python>=9.6.0",
 	"textual>=8.1.1",
 ]
+
+[project.urls]
+Homepage = "https://github.com/qthompson2/scrybe"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+scrybe = ["styles/*"]

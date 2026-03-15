@@ -35,7 +35,7 @@ class LoginScreen(Screen):
 			self.login_info["password"] = event.value 
 	
 	async def update_database(self) -> None:
-		self.app._db_pool = None
+		self.app.db = None
 		loadingIndicator = self.query_one("#loginScreen-loading")
 		loadingIndicator.styles.display = "block"
 

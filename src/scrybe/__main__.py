@@ -1,4 +1,4 @@
-from classes.scrybe import Scrybe
+from .classes import Scrybe
 
 def main():
 	app = Scrybe()

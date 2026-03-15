@@ -1,14 +1,15 @@
 from textual.app import App
 from .login import LoginScreen
 from .editor import EditorScreen
+from importlib.resources import files
 
 class Scrybe(App):
 	SCREENS = {
 		"login" : LoginScreen,
 		"editor" : EditorScreen
 	}
-	CSS_PATH = "../styles/scrybe.tcss"
-	_database = None
+	CSS_PATH = str(files("scrybe").joinpath("styles/scrybe.tcss"))
+	db = None
 
 	def on_mount(self):
 		self.theme = "gruvbox"
