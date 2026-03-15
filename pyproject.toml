@@ -1,9 +1,18 @@
+[build-system]
+
+
 [project]
 name = "scrybe"
 version = "0.0.1"
+description = "A light-weight terminal markdown editor, that saves to a remote or local mysql database."
+readme = "README.md"
+license = { text = "MIT }
 authors = [
 	{ name = "Quinn Thompson", email = "q.thompson088@gmail.com" },
 ]
-description = "A light-weight terminal markdown editor, that saves to a remote or local mysql database."
-readme = "README.md"
 requires-python = ">=3.14.3"
+
+dependencies = [
+	"mysql-connector-python>=9.6.0",
+	"textual>=8.1.1",
+]

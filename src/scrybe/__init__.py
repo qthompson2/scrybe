@@ -1,4 +1,8 @@
-from . import scrybe
+from classes.scrybe import Scrybe
 
-app = scrybe.ScrybeCLI()
-app.run()
+def main():
+	app = Scrybe()
+	app.run()
+
+if __name__ == "__main__":
+	main()
