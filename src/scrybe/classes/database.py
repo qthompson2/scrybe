@@ -168,6 +168,6 @@ class Database:
 				raise Exception(f"Workspace with name '{workspace_name}' does not exist!")
 
 			await self._execute("DELETE FROM page WHERE workspace_id = %s", params=[results[0][0]], database=Database.NAME)
+			self._connector.commit()
 			await self._execute("DELETE FROM workspace WHERE workspace_id = %s", params=[results[0][0]], database=Database.NAME)
-
 			self._connector.commit()
