@@ -114,11 +114,14 @@ class EditorScreen(Screen):
 		("ctrl+d", "delete", "Delete..."),
 		("ctrl+s", "save", "Save"),
 		("ctrl+e", "toggle_editor_view", "Toggle Editor"),
+		("ctrl+t", "toggle_table_of_contents", "Toggle Table of Contents")
 	]
 
 	current_workspace: str = None
 	current_page: int = None
 	editor_hidden: bool = False
+
+	editor_mode = "mixed"
 
 	page_wrappers: dict[int, PageWrapper] = {}
 
@@ -183,12 +186,26 @@ class EditorScreen(Screen):
 		if not self.editor_hidden:
 			text_area = self.query_one("#editorScreen-textArea")
 			mdv = self.query_one("#editorScreen-preview")
-			if text_area.styles.display == "block":
+			if self.editor_mode == "mixed":
 				text_area.styles.display = "none"
 				mdv.styles.width = "80%"
-			else:
+				self.editor_mode = "preview"
+			elif self.editor_mode == "preview":
+				mdv.styles.display = "none"
 				text_area.styles.display = "block"
+				text_area.styles.width = "80%"
+				self.editor_mode = "editor"
+			elif self.editor_mode == "editor":
+				text_area.styles.display = "block"
+				mdv.styles.display = "block"
 				mdv.styles.width = "40%"
+				text_area.styles.width = "40%"
+				self.editor_mode = "mixed"
+				
+	def action_toggle_table_of_contents(self) -> None:
+		if not self.editor_hidden:
+			mdv = self.query_one("#editorScreen-preview", MarkdownViewer)
+			mdv.show_table_of_contents = not mdv.show_table_of_contents
 	
 	def action_new(self) -> None:
 		self.app.push_screen(CreateNewScreen(self))
