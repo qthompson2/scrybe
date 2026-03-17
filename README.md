@@ -1,2 +1,2 @@
-# scribe
+# scrybe
 Markdown Editor
