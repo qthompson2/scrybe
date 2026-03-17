@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "markdown-scrybe"
-version = "0.0.17"
+version = "0.1.1"
 description = "A light-weight terminal markdown editor, that saves to a remote or local mysql database."
 readme = "README.md"
 license = { text = "MIT" }
@@ -16,6 +16,9 @@ requires-python = ">=3.14.3"
 dependencies = [
 	"mysql-connector-python>=9.6.0",
 	"textual>=8.1.1",
+	"tree-sitter>=0.25.2",
+	"tree-sitter-markdown>=0.5.1",
+	"unicodeit>=0.7.5"
 ]
 
 [project.urls]

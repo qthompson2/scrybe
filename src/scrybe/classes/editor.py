@@ -2,6 +2,15 @@ from textual.app import ComposeResult
 from textual.screen import Screen, ModalScreen
 from textual.widgets import Button, Input, Header, Footer, MarkdownViewer, ListView, ListItem, TextArea, Markdown, Tabs, Label, Tab
 from textual.containers import Vertical, Horizontal
+import unicodeit
+
+def parse_math(inp):
+	while (start := inp.find("$")) != -1:
+		end = inp[start+1:].find("$") + 1 + start+1
+		raw_math_string = inp[start+1:end-1]
+		proc_math_string = unicodeit.replace(raw_math_string)
+		inp = str(inp[:start]) + "*" + proc_math_string + "*" + str(inp[end:])
+	return inp
 
 class CreateNewScreen(ModalScreen):
 	BINDINGS = [("escape", "app.pop_screen", "Close")]
@@ -290,7 +299,7 @@ class EditorScreen(Screen):
 		if event.text_area.id == "editorScreen-textArea":
 			mdv = self.query_one("#editorScreen-preview")
 			md = mdv.query_one(Markdown)
-			md.update(event.text_area.text)
+			md.update(parse_math(event.text_area.text))
 	
 	async def update_workspaces(self) -> None:
 		workspace_names = await self.app.db.get_workspaces()
@@ -348,7 +357,7 @@ class EditorScreen(Screen):
 		text_area.load_text(page_content)
 		mdv = self.query_one("#editorScreen-preview", MarkdownViewer)
 		md = mdv.query_one(Markdown)
-		md.update(page_content)
+		md.update(parse_math(page_content))
 
 	def on_mount(self) -> None:
 		self.hide_editor()
